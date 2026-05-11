@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import Product,ProductImages
 from rest_framework import status 
+from django.db import transaction
+from django.db.models import Q
+
+
 
 
 # post
@@ -16,7 +20,8 @@ def create_prod(request):
             prod_name = request.data.get('name')
             prod_price = request.data.get('price')
             
-            Product.objects.create(id = prod_id,name = prod_name,price = prod_price)
+            with transaction.atomic():
+                Product.objects.create(id = prod_id,name = prod_name,price = prod_price)
 
             return Response({'status' : 'success', 'message':'prodect created successfully....'})
         except Product.DoesNotExist:
@@ -38,6 +43,7 @@ def create_prod_img(request):
 
             if not prod_id or not prod_name_id:
                 return Response({'status':'Failed','message': 'Id not found Product not created'},status=status.HTTP_400_BAD_REQUEST) 
+            
             prod_name = Product.objects.get(id = prod_name_id)
 
             images = request.FILES.getlist('image')
@@ -45,13 +51,14 @@ def create_prod_img(request):
             if not images:
                 return Response({'status':'Failed','message':'No images here'},status=status.HTTP_400_BAD_REQUEST)
 
-            img_list = []
-            for img in images:
+            with transaction.atomic():
 
-                new_img = ProductImages.objects.create(product=prod_name, image = img)
-                img_list.append(new_img.image.url)
+                img_list = []
+                for img in images:
+
+                    new_img = ProductImages.objects.create(product=prod_name, image = img)
+                    img_list.append(new_img.image.url) 
             
-            ProductImages.objects.create(id = prod_id,product = prod_name)
             return Response({'status' : 'success', 'message':'product created successfully....'})
         
         except ProductImages.DoesNotExist:
@@ -66,7 +73,7 @@ def create_prod_img(request):
 
 
 # get product with images
-@api_view(['GET'])
+@api_view(['POST'])
 def get_img(request):
     try:
         prod_id = request.data.get('id')
@@ -100,9 +107,37 @@ def get_img(request):
 
 
 
+# Search
+@api_view(['POST'])
+def search(request):
+
+    try:
+        search = request.data.get('search')
+    
+        queryset = Product.objects.all()
+        if search:
+            queryset = queryset.filter(Q(name__icontains = search) | Q(price__icontains = search) | Q(id__icontains = search))
+            
+        products = []
+        for prod in queryset:
+            temp = {"id" : prod.id,"name" : prod.name,"price" : prod.price}
+            products.append(temp)
+
+        return Response({"status":"success","message": f"Searched {search} data:", "products":products})
+    except Exception as e:
+        return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+
+
+
+
+
+
 # update product
 
-@api_view(['POST'])
+@api_view(['PUT'])
 def update_product(request):
 
     try:
@@ -113,11 +148,19 @@ def update_product(request):
 
         try:
             products = Product.objects.get(id = prod_id)
+
         except Product.DoesNotExist:
             return Response({"status": "Failed", "message": "ID not found."}, status=status.HTTP_404_NOT_FOUND)
- 
-        products.name = request.data.get('name')
-        products.price = request.data.get('price')
+
+        name = request.data.get('name')
+
+        if name:
+            products.name = name
+
+        price = request.data.get('price')
+        if price:
+            products.price = price
+
         products.save()
 
         return Response({"status" : "success","message":"Updated successfully"},status= status.HTTP_200_OK)
@@ -128,8 +171,11 @@ def update_product(request):
 
 
 
+
+
+
 # Update product images
-@api_view(['POST'])
+@api_view(['PUT'])
 def update_prod_images(request):
     try:
         prod_id = request.data.get('id')
@@ -186,7 +232,7 @@ def update_prod_images(request):
 
 
 # Delete product
-@api_view(['POST'])
+@api_view(['DELETE'])
 def delete_product(request):
 
     try:

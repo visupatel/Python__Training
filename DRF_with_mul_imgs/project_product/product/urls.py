@@ -9,4 +9,5 @@ urlpatterns = [
     path('update_product/',update_product),
     path('update_prod_images/',update_prod_images),
     path('delete_product/', delete_product),
+    path('search/', search),
 ]

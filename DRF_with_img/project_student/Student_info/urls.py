@@ -11,5 +11,4 @@ urlpatterns = [
     path('update_student/',update_student),
     path('update_student_profile/',update_student_profile),
     path('delete_student/',delete_student),
-    
 ]
