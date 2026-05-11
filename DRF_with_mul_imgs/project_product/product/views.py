@@ -120,7 +120,13 @@ def search(request):
             
         products = []
         for prod in queryset:
-            temp = {"id" : prod.id,"name" : prod.name,"price" : prod.price}
+            images = []
+            
+            for img in prod.images.all():
+                if img.image:
+                    images.append(img.image.url)
+
+            temp = {"id" : prod.id,"name" : prod.name,"price" : prod.price,"image" : images}
             products.append(temp)
 
         return Response({"status":"success","message": f"Searched {search} data:", "products":products})
