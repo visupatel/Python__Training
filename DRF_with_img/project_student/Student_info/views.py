@@ -35,9 +35,13 @@ def create_student_profile(request):
     try:
         if not std_id or not profile_id:
             return Response({"status" : "Failed", "message" : "Not created"},status = status.HTTP_400_BAD_REQUEST)
-        std = Student.objects.get(id = std_id)
-        Student_Profile.objects.create(student = std,branch = branch,dept = department,image = img)
-        return Response({"status" : "success","message" : "Student Profile Created Successfully"},status= status.HTTP_201_CREATED)
+        try:
+            std = Student.objects.get(id = std_id)
+            Student_Profile.objects.create(student = std,branch = branch,dept = department,image = img)
+            return Response({"status" : "success","message" : "Student Profile Created Successfully"},status= status.HTTP_201_CREATED)
+        except Student.DoesNotExist:
+            return Response({"status": "Failed", "message": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+
     except Exception as e:
         return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -48,23 +52,25 @@ def create_student_profile(request):
 @api_view(['GET'])
 def get_student(request):
 
-    std_id = request.data.get('id')
-
     try:
-        if std_id:
-            std_data = Student.objects.filter(id = std_id)
-        
-        else:
-            std_data = Student.objects.all()
-        
+        std_id = request.data.get('id')
+
+        try:
+            if std_id:
+                std_data = Student.objects.filter(id = std_id)
+            
+            else:
+                std_data = Student.objects.all()
+
+        except Student.DoesNotExist:
+            return Response({"status": "Failed", "message": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+
         std_info = []
         for detail in std_data:
             temp = {"id":detail.id,"name":detail.name, "mobile_no":detail.mobile_no}
             std_info.append(temp)
 
         return Response({"status" : "success", "message" : "Fetch student data...", "student":std_info})
-    except Student.DoesNotExist:
-        return Response({"status": "Failed", "message": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -75,23 +81,23 @@ def get_student(request):
 @api_view(['GET'])
 def get_student_profile(request):
 
-    profile_id = request.data.get('id')
-
     try:
-        if profile_id:
-            std_profile = Student_Profile.objects.filter(id = profile_id)
-        
-        else:
-            std_profile = Student_Profile.objects.all()
-        
+
+        profile_id = request.data.get('id')
+        try:
+            if profile_id:
+                std_profile = Student_Profile.objects.filter(id = profile_id)
+            else:
+                std_profile = Student_Profile.objects.all()
+        except Student_Profile.DoesNotExist:
+            return Response({"status": "Failed", "message": "Student profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
         std_data = []
         for detail in std_profile:
             temp = {"id":detail.id,"student" : detail.student.id,"branch":detail.branch, "dept":detail.dept,"image" : detail.image.url}
             std_data.append(temp)
 
         return Response({"status" : "success", "message" : "Fetch student Profile...", "student_profile":std_data})
-    except Student_Profile.DoesNotExist:
-        return Response({"status": "Failed", "message": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -128,19 +134,31 @@ def update_student(request):
 # update student profile
 @api_view(['POST'])
 def update_student_profile(request):
-    profile_id = request.data.get('id')
-    std_id = request.data.get('std_id')
-    branch = request.data.get('branch')
-    department = request.data.get('dept')
-    img = request.data.get('image')
 
     try:
+        profile_id = request.data.get('id')
+        std_id = request.data.get('std_id')
+        branch = request.data.get('branch')
+        department = request.data.get('dept')
+        img = request.data.get('image')
 
-        if not std_id or not profile_id:
-            return Response({"status":"Failed","message":"Not Found"},status= status.HTTP_404_NOT_FOUND)
+        if not profile_id:
+            return Response({"status":"Failed","message":"Profile id not Found"},status= status.HTTP_404_NOT_FOUND)
 
-        std = Student.objects.get(id = std_id)
-        std_profile = Student_Profile.objects.get(id = profile_id)
+        if not std_id:
+            return Response({"status":"Failed","message":"student id not Found"},status= status.HTTP_404_NOT_FOUND)
+
+        try:
+            std = Student.objects.get(id = std_id)
+        except Student.DoesNotExist:
+            return Response({"status": "Failed", "message": "ID not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            std_profile = Student_Profile.objects.get(id = profile_id)
+        except Student_Profile.DoesNotExist:
+            return Response({"status": "Failed", "message": "Student profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        
         std_profile.student = std
         std_profile.branch = branch
         std_profile.dept = department
