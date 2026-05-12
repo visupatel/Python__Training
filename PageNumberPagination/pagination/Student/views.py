@@ -5,8 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.db import transaction
 from .serializers import StudentSerializer
-# from rest_framework.pagination import PageNumberPagination
-
+from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
 
 
@@ -53,14 +52,23 @@ def get_student(request):
         except ValueError:
             return Response({"status" : "failed", "message" : "Page_number and page_size must be integer"},status=status.HTTP_400_BAD_REQUEST)
         
+        
         if page_number <= 0 or page_size <= 0:
             return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
 
+        
         try:
             queryset = Student.objects.all()
         except Student.DoesNotExist:
             return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
-    
+
+        # Search by name, roll_no or id
+        search = request.data.get('search')
+
+        if search:
+            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) | Q(id__icontains = search))
+
+
         paginator = Paginator(queryset,page_size)
 
         try:
@@ -104,6 +112,7 @@ def get_std(request):
         page = request.data.get('page_number')
         page_size = request.data.get('page_size')
 
+        
         if not page or not page_size:
             return Response({"status":"Failed","message":"page or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
 
@@ -117,8 +126,14 @@ def get_std(request):
         if page <= 0 or page_size <= 0:
             return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
 
+        # Search by name, roll_no or id
+        search = request.data.get('search')
         queryset = Student.objects.all()
-    
+
+        if search:
+            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) | Q(id__icontains = search))
+
+
         paginator = Paginator(queryset,page_size)
 
         try:
