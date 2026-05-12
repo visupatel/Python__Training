@@ -25,9 +25,9 @@ def create_student(request):
         if not std_id:
             return Response({"status":"Failed","message":"Student Id not found"},status=status.HTTP_404_NOT_FOUND)
         
-        # with transaction.atomic():
-        student = Student.objects.create(id = std_id, name = std_name, roll_no = std_roll)
-        return Response({"status":"success","message":"student data created successfully..."},status=status.HTTP_201_CREATED)
+        with transaction.atomic():
+            Student.objects.create(id = std_id, name = std_name, roll_no = std_roll)
+            return Response({"status":"success","message":"student data created successfully..."},status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -44,6 +44,9 @@ def get_student(request):
         page_number = request.data.get('page_number')
         page_size = request.data.get('page_size')
 
+        if not page_number or not page_size:
+            return Response({"status":"Failed","message":"page_number or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
+
         try:
             page_number = int(page_number)
             page_size = int(page_size)
@@ -51,7 +54,7 @@ def get_student(request):
             return Response({"status" : "failed", "message" : "Page_number and page_size must be integer"},status=status.HTTP_400_BAD_REQUEST)
         
         if page_number <= 0 or page_size <= 0:
-            return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=400)
+            return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
 
         try:
             queryset = Student.objects.all()
@@ -101,14 +104,18 @@ def get_std(request):
         page = request.data.get('page_number')
         page_size = request.data.get('page_size')
 
+        if not page or not page_size:
+            return Response({"status":"Failed","message":"page or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
+
+
         try:
             page = int(page)
             page_size = int(page_size)
         except ValueError:
-            return Response({"status":"failed" ,"message":"page and page_size must be integers"},status=400)
+            return Response({"status":"failed" ,"message":"page and page_size must be integers"},status=status.HTTP_400_BAD_REQUEST)
 
         if page <= 0 or page_size <= 0:
-            return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=400)
+            return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
 
         queryset = Student.objects.all()
     
@@ -117,7 +124,7 @@ def get_std(request):
         try:
             paginated_data = paginator.page(page)
         except EmptyPage:
-            return Response({"status":"failed" ,"message": "Page number out of range"},status=400)
+            return Response({"status":"failed" ,"message": "Page number out of range"},status=status.HTTP_400_BAD_REQUEST)
 
 
         serilizer = StudentSerializer(paginated_data,many = True)
