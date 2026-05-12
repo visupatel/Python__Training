@@ -98,8 +98,6 @@ def get_student(request):
 def get_std(request):
 
     try:
-        # page = '1' if request.data.get('page_number') == '' else str(request.data.get('page_number', 1))
-        # page_size = '2' if request.data.get('page_size') == '' else str(request.data.get('page_size', 2))
         page = request.data.get('page_number')
         page_size = request.data.get('page_size')
 
