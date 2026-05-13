@@ -7,6 +7,8 @@ from django.db import transaction
 from .serializers import StudentSerializer
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
+from django.utils import timezone
+from datetime import date
 
 
 
@@ -66,8 +68,13 @@ def get_student(request):
         search = request.data.get('search')
 
         if search:
-            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) | Q(id__icontains = search))
+            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) )
 
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+
+        if start_date and end_date:
+            queryset = Student.objects.filter(date__date__range = (start_date,end_date))
 
         paginator = Paginator(queryset,page_size)
 
@@ -81,7 +88,8 @@ def get_student(request):
             list_std.append({
                 'id':std.id, 
                 'name':std.name,
-                'roll_no':std.roll_no
+                'roll_no':std.roll_no,
+                "date" : std.date
             })
 
         return Response({
@@ -131,7 +139,7 @@ def get_std(request):
         queryset = Student.objects.all()
 
         if search:
-            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) | Q(id__icontains = search))
+            queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search))
 
 
         paginator = Paginator(queryset,page_size)

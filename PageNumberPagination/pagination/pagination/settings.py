@@ -106,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -119,7 +119,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
+# Source - https://stackoverflow.com/q/43139230
+# Posted by Sandeep, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-05-13, License - CC BY-SA 3.0
+
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 2,
+
+    'DATETIME_FORMAT': "%Y-%m-%d %H:%M:%S",
 }
+
