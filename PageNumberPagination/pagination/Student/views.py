@@ -7,8 +7,6 @@ from django.db import transaction
 from .serializers import StudentSerializer
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
-from django.utils import timezone
-from datetime import datetime
 
 
 
@@ -50,7 +48,7 @@ def get_student(request):
         end_date = request.data.get('end_date')
 
         if not page_number or not page_size:
-            return Response({"status":"Failed","message":"page_number or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status":"failed","message":"page_number or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
 
         try:
             page_number = int(page_number)
