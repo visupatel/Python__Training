@@ -46,13 +46,15 @@ def get_student(request):
         
         if page_number <= 0 or page_size <= 0:
             return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
-   
+
+        
         try:
             queryset = Student.objects.all()
-            if std_id :
-                queryset = Student.objects.filter(id = std_id)
         except Student.DoesNotExist:
             return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
+        
+        if std_id :
+            queryset = queryset.filter(id = std_id)
 
         if search:
             queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) )
@@ -116,10 +118,11 @@ def get_std(request):
 
         try:
             queryset = Student.objects.all()
-            if std_id :
-                queryset = Student.objects.filter(id = std_id)
         except Student.DoesNotExist:
             return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
+        
+        if std_id :
+            queryset = queryset.filter(id = std_id)
 
         if start_date and end_date:
             queryset = Student.objects.filter(date__date__range = (start_date,end_date))
