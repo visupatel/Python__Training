@@ -8,7 +8,7 @@ from .serializers import StudentSerializer
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
-from datetime import date
+from datetime import datetime
 
 
 
@@ -42,8 +42,12 @@ def create_student(request):
 def get_student(request):
 
     try:
+        std_id = request.data.get('id')
+        search = request.data.get('search')
         page_number = request.data.get('page_number')
         page_size = request.data.get('page_size')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
 
         if not page_number or not page_size:
             return Response({"status":"Failed","message":"page_number or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
@@ -61,17 +65,15 @@ def get_student(request):
         
         try:
             queryset = Student.objects.all()
+            if std_id :
+                queryset = Student.objects.filter(id = std_id)
         except Student.DoesNotExist:
             return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
 
-        # Search by name, roll_no or id
-        search = request.data.get('search')
 
         if search:
             queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) )
 
-        start_date = request.data.get('start_date')
-        end_date = request.data.get('end_date')
 
         if start_date and end_date:
             queryset = Student.objects.filter(date__date__range = (start_date,end_date))
@@ -89,7 +91,7 @@ def get_student(request):
                 'id':std.id, 
                 'name':std.name,
                 'roll_no':std.roll_no,
-                "date" : std.date
+                "date" : std.date.strftime("%Y-%m-%d %H:%M:%S")
             })
 
         return Response({
@@ -117,8 +119,12 @@ def get_student(request):
 def get_std(request):
 
     try:
+        std_id = request.data.get('id')
+        search = request.data.get('search')
         page = request.data.get('page_number')
         page_size = request.data.get('page_size')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
 
         
         if not page or not page_size:
@@ -134,9 +140,15 @@ def get_std(request):
         if page <= 0 or page_size <= 0:
             return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
 
-        # Search by name, roll_no or id
-        search = request.data.get('search')
-        queryset = Student.objects.all()
+        try:
+            queryset = Student.objects.all()
+            if std_id :
+                queryset = Student.objects.filter(id = std_id)
+        except Student.DoesNotExist:
+            return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
+
+        if start_date and end_date:
+            queryset = Student.objects.filter(date__date__range = (start_date,end_date))
 
         if search:
             queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search))
