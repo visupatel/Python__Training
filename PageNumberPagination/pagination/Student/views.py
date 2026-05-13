@@ -9,33 +9,21 @@ from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
 
 
-
-
-
 # create student
 @api_view(['POST'])
 def create_student(request):
 
     try:
-        std_id = request.data.get('id')
         std_name = request.data.get('name')
         std_roll = request.data.get('roll_no')
-
-        if not std_id:
-            return Response({"status":"Failed","message":"Student Id not found"},status=status.HTTP_404_NOT_FOUND)
         
         with transaction.atomic():
-            Student.objects.create(id = std_id, name = std_name, roll_no = std_roll)
+            Student.objects.create(name = std_name, roll_no = std_roll)
             return Response({"status":"success","message":"student data created successfully..."},status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"status":"Error","message" : str(e)},status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     
-
-
-
-
-
 @api_view(['POST'])
 def get_student(request):
 
@@ -56,11 +44,9 @@ def get_student(request):
         except ValueError:
             return Response({"status" : "failed", "message" : "Page_number and page_size must be integer"},status=status.HTTP_400_BAD_REQUEST)
         
-        
         if page_number <= 0 or page_size <= 0:
             return Response({"status":"failed" ,"message":"page and page_size must be greater than 0"},status=status.HTTP_400_BAD_REQUEST)
-
-        
+   
         try:
             queryset = Student.objects.all()
             if std_id :
@@ -68,13 +54,11 @@ def get_student(request):
         except Student.DoesNotExist:
             return Response({"status":"failed", "message":"Student not found"},status=status.HTTP_404_NOT_FOUND)
 
-
         if search:
             queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search) )
 
-
         if start_date and end_date:
-            queryset = Student.objects.filter(date__date__range = (start_date,end_date))
+            queryset = queryset.filter(date__date__range = (start_date,end_date))
 
         paginator = Paginator(queryset,page_size)
 
@@ -89,7 +73,7 @@ def get_student(request):
                 'id':std.id, 
                 'name':std.name,
                 'roll_no':std.roll_no,
-                "date" : std.date.strftime("%Y-%m-%d %H:%M:%S")
+                "date" : std.date.strftime("%Y-%m-%d %H:%M:%S") if std.date else None
             })
 
         return Response({
@@ -107,11 +91,6 @@ def get_student(request):
         return Response({'status':'Error','message':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
-
-
-
 # with serializer
 @api_view(['POST'])
 def get_std(request):
@@ -124,11 +103,8 @@ def get_std(request):
         start_date = request.data.get('start_date')
         end_date = request.data.get('end_date')
 
-        
         if not page or not page_size:
             return Response({"status":"Failed","message":"page or page_size must be given"},status=status.HTTP_400_BAD_REQUEST)
-
-
         try:
             page = int(page)
             page_size = int(page_size)
@@ -150,8 +126,6 @@ def get_std(request):
 
         if search:
             queryset = queryset.filter(Q(name__icontains = search) | Q(roll_no__icontains = search))
-
-
         paginator = Paginator(queryset,page_size)
 
         try:
@@ -159,9 +133,7 @@ def get_std(request):
         except EmptyPage:
             return Response({"status":"failed" ,"message": "Page number out of range"},status=status.HTTP_400_BAD_REQUEST)
 
-
         serilizer = StudentSerializer(paginated_data,many = True)
-
         return Response({
             "status":"success",
             "message":"Fetch student data...",
@@ -171,6 +143,7 @@ def get_std(request):
             "students":serilizer.data
             },
             status=status.HTTP_200_OK)
+    
     except Exception as e:
         return Response({'status':'Error','message':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
