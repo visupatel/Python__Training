@@ -66,7 +66,7 @@ def get_student(request):
 
         try:
             paginator_data = paginator.page(page_number)
-        except:
+        except EmptyPage:
             return Response({"status":"failed" ,"message": "Page number out of range"},status=status.HTTP_501_NOT_IMPLEMENTED)
 
         list_std = []
