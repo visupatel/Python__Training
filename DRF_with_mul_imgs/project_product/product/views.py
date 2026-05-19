@@ -184,7 +184,6 @@ def update_prod_images(request):
 # Delete product
 @api_view(['DELETE'])
 def delete_product(request):
-
     try:
         prod_id = request.data.get('id')
         if not prod_id:

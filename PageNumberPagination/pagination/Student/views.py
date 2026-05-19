@@ -8,7 +8,6 @@ from .serializers import StudentSerializer
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage
 
-
 # create student
 @api_view(['POST'])
 def create_student(request):
