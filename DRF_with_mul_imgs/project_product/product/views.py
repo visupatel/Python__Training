@@ -59,7 +59,7 @@ def get_img(request):
             products = Product.objects.all()
             if prod_id:
                 products = Product.objects.filter(id = prod_id)
-        except ProductImages.DoesNotExist:
+        except Product.DoesNotExist:
             return Response({"status": "failed", "message": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
         
         prod_data = []

@@ -67,7 +67,7 @@ def get_student(request):
         try:
             paginator_data = paginator.page(page_number)
         except EmptyPage:
-            return Response({"status":"failed" ,"message": "Page number out of range"},status=status.HTTP_501_NOT_IMPLEMENTED)
+            return Response({"status":"failed" ,"message": "Page number out of range"},status=status.HTTP_400_BAD_REQUEST)
 
         list_std = []
         for std in paginator_data:
