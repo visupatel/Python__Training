@@ -6,7 +6,6 @@ from django.db import transaction
 from .models import Author,Book,BookImages
 from .seializers import AuthorSerializer,BookSerializer,BookImageSerializer
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.db.models import Q
 from django.core.paginator import Paginator,EmptyPage
 
@@ -459,7 +458,7 @@ class BookImageView(APIView):
             
             list_images = []
             for img in images:
-                save_path = default_storage.save(f'book_images/{book.name}/{img}',ContentFile(img.read()))
+                save_path = default_storage.save(f'book_images/{book.name}/{img}',img)
                 new_image = default_storage.url(save_path)
                 list_images.append(new_image)
             BookImages.objects.create(book = book,image = list_images)
@@ -544,7 +543,7 @@ class BookImageView(APIView):
             if images:
                 image = []
                 for img in images:
-                    save_path = default_storage.save(f'book_images/{book.name}/{img}',ContentFile(img.read()))
+                    save_path = default_storage.save(f'book_images/{book.name}/{img}',img)
                     new_image = default_storage.url(save_path)
                     image.append(new_image)
                 bookImage.image = image

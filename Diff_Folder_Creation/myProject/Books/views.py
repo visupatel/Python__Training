@@ -5,7 +5,6 @@ from .models import Author,Book,BookImages
 from .serializers import AuthorSerializer,BookSerializer
 from rest_framework.response import Response
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.db.models import Q
 
 
@@ -101,7 +100,7 @@ def create_book_images(request):
             )
         
         for img in images:
-            save_path = default_storage.save(f'{book.name}/{img}',ContentFile(img.read()))
+            save_path = default_storage.save(f'{book.name}/{img}',img)
             BookImages.objects.create(book = book,image = save_path)
             
         return Response({
@@ -352,10 +351,9 @@ def update_book(request):
         
         if images:
             book_images = BookImages.objects.filter(book = books)
-
             book_images.delete()
             for img in images:
-                save_path = default_storage.save(f'{books.name}/{img}',ContentFile(img.read()))
+                save_path = default_storage.save(f'{books.name}/{img}',img)
                 BookImages.objects.create(image = save_path,book = books)
 
         with transaction.atomic():
