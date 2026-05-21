@@ -951,11 +951,18 @@ class AuthorBookView(APIView):
             elif model == 'bookImages':
                 book_image = self.post_bookImage(request)
                 return book_image
+            else:
+                return Response({
+                    'status':'failed',
+                    'message':'Invalid model name'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             
         except Exception as e:
             return Response({
                 'status':'failed',
                 'message':str(e)
             },
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
