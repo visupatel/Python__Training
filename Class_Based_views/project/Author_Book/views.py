@@ -109,7 +109,6 @@ class AuthorView(APIView):
             },
             status=status.HTTP_200_OK
             )
-        
         except Exception as e:
             return Response({
                 'status':'error',
@@ -117,13 +116,6 @@ class AuthorView(APIView):
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-    def get_obj(self,pk):
-        try:
-            author = Author.objects.get(id = pk)
-            return author
-        except:
-            raise Http404
         
     def put(self,request):
         try:
@@ -137,7 +129,15 @@ class AuthorView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            author = self.get_obj(author_id)
+            try:
+                author = Author.objects.get(id = author_id)
+            except Author.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "message": "Author not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
 
             if new_name:
                 author.name = new_name
@@ -153,13 +153,6 @@ class AuthorView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -178,7 +171,17 @@ class AuthorView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            author = self.get_obj(author_id)
+            
+            try:
+                author = Author.objects.get(id = author_id)
+            except Author.DoesNotExist:
+                return Response({
+                    "status": "failed",
+                    "message": "Author not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+            
             author.delete()
             return Response(
                 {
@@ -187,13 +190,6 @@ class AuthorView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -335,13 +331,6 @@ class BookView(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-    def get_obj(self,pk):
-        try:
-            book = Book.objects.get(id = pk)
-            return book
-        except:
-            raise Http404
-        
     def put(self,request):
         try:
             book_id = request.data.get('book_id')
@@ -356,7 +345,15 @@ class BookView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            book = self.get_obj(book_id)
+            try:
+                book = Book.objects.get(id = book_id)
+            except Book.DoesNotExist:
+                return Response({
+                    "status":"failed",
+                    "message":"Book not found",
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
 
             if new_name:
                 book.name = new_name
@@ -376,6 +373,7 @@ class BookView(APIView):
 
             with transaction.atomic():
                 book.save()
+
                 return Response(
                 {
                     "status": "success",
@@ -383,13 +381,6 @@ class BookView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -408,7 +399,17 @@ class BookView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            book = self.get_obj(book_id)
+            
+            try:
+                book = Book.objects.get(id = book_id)
+            except Book.DoesNotExist:
+                return Response({
+                    "status":"failed",
+                    "message":"Book not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+            
             book.delete()
             return Response(
                 {
@@ -417,13 +418,6 @@ class BookView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -506,13 +500,6 @@ class BookImageView(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def get_obj(self,pk):
-        try:
-            bookImage = BookImages.objects.get(id = pk)
-            return bookImage
-        except:
-            raise Http404
-        
     def put(self,request):
         try:
             book_img_id = request.data.get('id')
@@ -526,8 +513,15 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            bookImage = self.get_obj(book_img_id)
-
+            try:
+                bookImage = BookImages.objects.get(id = book_img_id)
+            except BookImages.DoesNotExist: 
+                return Response({
+                    "status": "failed",
+                    "message": "Book Image not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
             if book_id:
                 try:
                     book = Book.objects.get(id = book_id)
@@ -550,6 +544,7 @@ class BookImageView(APIView):
 
             with transaction.atomic():
                 bookImage.save()
+
                 return Response(
                 {
                     "status": "success",
@@ -557,13 +552,6 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -582,7 +570,17 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            bookImage = self.get_obj(book_img_id)
+            
+            try:
+                bookImage = BookImages.objects.get(id = book_img_id)
+            except BookImages.DoesNotExist: 
+                return Response({
+                    "status": "failed",
+                    "message": "Book Image not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+            
             bookImage.delete()
             return Response(
                 {
@@ -591,13 +589,6 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except Http404:
-            return Response({
-                "status": "error", 
-                "message": "'id' not found"
-                },
-                status=status.HTTP_404_NOT_FOUND,
-                )
         except Exception as e:
             return Response({
                 "status": "error", 
