@@ -1,4 +1,3 @@
-from django.http import Http404
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,8 +11,26 @@ from django.core.paginator import Paginator,EmptyPage
 class AuthorView(APIView):
     def post(self,request):
         try:
-            author_name = request.data.get('name')
+            author_name = request.data.get('author_name')
             country = request.data.get('country')
+
+            if not author_name or not country:
+                return Response({
+                    "status":"failed",
+                    "message":"'name' and 'country' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            author_names = Author.objects.filter(name = author_name)
+            if len(author_names) > 0:
+                return Response({
+                        "status":"failed",
+                        "message":f"'{author_name}' name is already exists please enter another name"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+            
             with transaction.atomic():
                 Author.objects.create(name = author_name,country = country)
                 return Response({
@@ -22,6 +39,7 @@ class AuthorView(APIView):
                 },
                 status=status.HTTP_201_CREATED
                 )
+
         except Exception as e:
             return Response({
                 'status':'error',
@@ -140,7 +158,16 @@ class AuthorView(APIView):
                 )
 
             if new_name:
+                author = Author.objects.filter(name = new_name)
+                if len(author) > 0:
+                    return Response({
+                            "status":"failed",
+                            "message":f" '{new_name}' name is already exists please enter another name"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                        )
                 author.name = new_name
+
             if new_country:
                 author.country = new_country
 
@@ -201,18 +228,18 @@ class AuthorView(APIView):
 class BookView(APIView):
     def post(self,request):
         try:
-            book_name = request.data.get('name')
+            book_name = request.data.get('book_name')
             author_id = request.data.get('author_id')
-            published_date = request.data.get('date')
+            published_date = request.data.get('published_date')
 
-            if not author_id:
+            if not author_id or not book_name or not published_date:
                 return Response({
                     'status':'failed',
-                    'message':"'author_id' must be required"
+                    'message':"'author_id', 'book_name' and 'published_date' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             try:
                 author = Author.objects.get(id = author_id)
             except Author.DoesNotExist:
