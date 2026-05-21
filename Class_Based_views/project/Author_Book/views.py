@@ -17,7 +17,7 @@ class AuthorView(APIView):
             if not author_name or not country:
                 return Response({
                     "status":"failed",
-                    "message":"'name' and 'country' must be required"
+                    "message":"'author_name' and 'country' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -814,26 +814,39 @@ class BookImageViewSerializer(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-
-
-
-
-
+# for multiple post method in one class
 class AuthorBookView(APIView):
     def post_author(self,request):
         try:
-            author_name = request.data.get('name')
+            author_name = request.data.get('author_name')
             country = request.data.get('country')
 
+            if not author_name or not country:
+                return Response({
+                    "status":"failed",
+                    "message":"'author_name' and 'country' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            author_names = Author.objects.filter(name = author_name)
+            if len(author_names) > 0:
+                return Response({
+                        "status":"failed",
+                        "message":f"'{author_name}' name is already exists please enter another name"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+            
             with transaction.atomic():
                 Author.objects.create(name = author_name,country = country)
                 return Response({
                     'status':'success',
-                    'message':'Author created successfully'
+                    'message':'Author created successfully....'
                 },
                 status=status.HTTP_201_CREATED
                 )
+
         except Exception as e:
             return Response({
                 'status':'error',
@@ -844,16 +857,18 @@ class AuthorBookView(APIView):
     
     def post_book(self,request):
         try:
-            book_name = request.data.get('name')
+            book_name = request.data.get('book_name')
             author_id = request.data.get('author_id')
-            published_date = request.data.get('date')
-            if not author_id:
+            published_date = request.data.get('published_date')
+
+            if not author_id or not book_name or not published_date:
                 return Response({
                     'status':'failed',
-                    'message':"'author_id' must be required"
+                    'message':"'author_id', 'book_name' and 'published_date' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
+
             try:
                 author = Author.objects.get(id = author_id)
             except Author.DoesNotExist:
@@ -878,14 +893,17 @@ class AuthorBookView(APIView):
                 'message':str(e)
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            )   
         
     def post(self,request,model):
         try:
             if model == 'authors':
-                return self.post_author(request)
+                author = self.post_author(request)
+                return author
             elif model == 'books':
-                return self.post_book(request)
+                book = self.post_book(request)
+                return book
+            
         except Exception as e:
             return Response({
                 'status':'failed',
