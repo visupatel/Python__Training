@@ -8,4 +8,5 @@ urlpatterns = [
     path('authors/',AuthorViewSerializer.as_view()),
     path('books/',BookViewSerializer.as_view()),
     path('booksImg/',BookImageViewSerializer.as_view()),
+    path('details/<str:model>/',AuthorBookView.as_view()),
 ]

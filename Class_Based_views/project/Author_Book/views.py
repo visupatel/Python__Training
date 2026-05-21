@@ -813,4 +813,83 @@ class BookImageViewSerializer(APIView):
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+
+
+
+
+
+class AuthorBookView(APIView):
+    def post_author(self,request):
+        try:
+            author_name = request.data.get('name')
+            country = request.data.get('country')
+
+            with transaction.atomic():
+                Author.objects.create(name = author_name,country = country)
+                return Response({
+                    'status':'success',
+                    'message':'Author created successfully'
+                },
+                status=status.HTTP_201_CREATED
+                )
+        except Exception as e:
+            return Response({
+                'status':'error',
+                'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def post_book(self,request):
+        try:
+            book_name = request.data.get('name')
+            author_id = request.data.get('author_id')
+            published_date = request.data.get('date')
+            if not author_id:
+                return Response({
+                    'status':'failed',
+                    'message':"'author_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                author = Author.objects.get(id = author_id)
+            except Author.DoesNotExist:
+                return Response({
+                    'status':'failed',
+                    'message':"Author not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+            
+            with transaction.atomic():
+                Book.objects.create(name = book_name,published_date = published_date,author = author)
+                return Response({
+                    'status':'success',
+                    'message':'Book created successfully....'
+                },
+                status=status.HTTP_201_CREATED
+                )
+        except Exception as e:
+            return Response({
+                'status':'error',
+                'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
+    def post(self,request,model):
+        try:
+            if model == 'authors':
+                return self.post_author(request)
+            elif model == 'books':
+                return self.post_book(request)
+        except Exception as e:
+            return Response({
+                'status':'failed',
+                'message':str(e)
+            },
+            status=status.HTTP_400_BAD_REQUEST
+            )
