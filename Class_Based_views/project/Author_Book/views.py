@@ -893,7 +893,52 @@ class AuthorBookView(APIView):
                 'message':str(e)
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )   
+            ) 
+          
+    def post_bookImage(self,request):
+        try:
+            book_id = request.data.get('book_id')
+            images = request.FILES.getlist('image')
+
+            if not book_id:
+                return Response({
+                    'status':'failed',
+                    'message':"'book_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                book = Book.objects.get(id = book_id)
+            except Book.DoesNotExist:
+                return Response({
+                    'status':'failed',
+                    'message':"Book not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+            
+            list_images = []
+            for img in images:
+                save_path = default_storage.save(f'book_images/{book.name}/{img}',img)
+                new_image = default_storage.url(save_path)
+                list_images.append(new_image)
+            BookImages.objects.create(book = book,image = list_images)
+                
+            return Response({
+                'status':'success',
+                'message':'Book Images created successfully....'
+            },
+            status=status.HTTP_201_CREATED
+            )
+        
+        except Exception as e:
+            return Response({
+                'status':'error',
+                'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
     def post(self,request,model):
         try:
@@ -903,6 +948,9 @@ class AuthorBookView(APIView):
             elif model == 'books':
                 book = self.post_book(request)
                 return book
+            elif model == 'bookImages':
+                book_image = self.post_bookImage(request)
+                return book_image
             
         except Exception as e:
             return Response({
