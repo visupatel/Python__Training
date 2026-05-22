@@ -35,7 +35,8 @@ class AuthorView(APIView):
                 Author.objects.create(name = author_name,country = country)
                 return Response({
                     'status':'success',
-                    'message':'Author created successfully....'
+                    'message':'Author created successfully....',
+                    
                 },
                 status=status.HTTP_201_CREATED
                 )
@@ -77,7 +78,7 @@ class AuthorView(APIView):
             if page_number <= 0 or page_size <= 0:
                 return Response({
                     "status":"failed" ,
-                    "message":"'page_number' and 'page_size' must be greater than 0"
+                    "message":"'page_number' and 'page_size' must be greater than 0",
                     },
                     status=status.HTTP_400_BAD_REQUEST
                     )
@@ -86,7 +87,7 @@ class AuthorView(APIView):
 
             if author_id:
                 author = author.filter(id = author_id)
-            
+
             if search:
                 author = author.filter(Q(name__icontains = search) | Q(country__icontains = search) | Q(books__id__icontains = search) | Q(books__name__icontains = search))
             
@@ -459,10 +460,10 @@ class BookImageView(APIView):
             book_id = request.data.get('book_id')
             images = request.FILES.getlist('image')
 
-            if not book_id:
+            if not book_id or not images:
                 return Response({
                     'status':'failed',
-                    'message':"'book_id' must be required"
+                    'message':"'book_id' and 'images' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -900,10 +901,10 @@ class AuthorBookView(APIView):
             book_id = request.data.get('book_id')
             images = request.FILES.getlist('image')
 
-            if not book_id:
+            if not book_id or not images:
                 return Response({
                     'status':'failed',
-                    'message':"'book_id' must be required"
+                    'message':"'book_id' and 'images' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -940,11 +941,19 @@ class AuthorBookView(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-    def post(self,request,model):
+    def post(self,request):
         try:
+            model = request.data.get('model_name')
+            if not model :
+                return Response({
+                    'status':'failed',
+                    'message':"'model_name' must be given(models - 'authors','books','bookImages')"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             if model == 'authors':
                 author = self.post_author(request)
-                return author
+                return author                       
             elif model == 'books':
                 book = self.post_book(request)
                 return book
