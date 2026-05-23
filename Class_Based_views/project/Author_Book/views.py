@@ -1,5 +1,4 @@
 from datetime import date
-
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -40,7 +39,7 @@ class AuthorView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if country and not country.isalpha():
+            if not country.isalpha():
                 return Response({"status":"failed","message":"'country' must be in string"},status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
@@ -258,6 +257,7 @@ class BookView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
+            
             if not author_id :
                 return Response({
                     "status":"failed",
@@ -265,6 +265,7 @@ class BookView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
+            
             try:
                 author_id = int(author_id)
             except ValueError:
@@ -284,6 +285,7 @@ class BookView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND
                 )
+            
             if not published_date :
                 return Response({
                     "status":"failed",
@@ -310,6 +312,7 @@ class BookView(APIView):
                 },
                 status=status.HTTP_201_CREATED
                 )
+            
         except Exception as e:
             return Response({
                 'status':'error',
@@ -560,10 +563,20 @@ class BookImageView(APIView):
             book_id = request.data.get('book_id')
             images = request.FILES.getlist('image')
 
-            if not book_id or not images:
+            if not book_id:
                 return Response({
                     'status':'failed',
-                    'message':"'book_id' and 'images' must be required"
+                    'message':"'book_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                book_id = int(book_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":f"'book_id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -576,6 +589,14 @@ class BookImageView(APIView):
                     'message':"Book not found"
                 },
                 status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if not images:
+                return Response({
+                    'status':'failed',
+                    'message':"'image' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
                 )
             
             list_images = []
