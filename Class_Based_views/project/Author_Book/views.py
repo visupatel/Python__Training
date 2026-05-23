@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,15 +15,15 @@ class AuthorView(APIView):
         try:
             author_name = request.data.get('author_name')
             country = request.data.get('country')
-
-            if not author_name or not country:
+            
+            if not author_name :
                 return Response({
                     "status":"failed",
-                    "message":"'author_name' and 'country' must be required"
+                    "message":"'author_name' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            
+                
             author_names = Author.objects.filter(name = author_name)
             if len(author_names) > 0:
                 return Response({
@@ -30,13 +32,22 @@ class AuthorView(APIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST
                     )
-            
+            if not country:
+                return Response({
+                    "status":"failed",
+                    "message":"'country' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if country and not country.isalpha():
+                return Response({"status":"failed","message":"'country' must be in string"},status=status.HTTP_400_BAD_REQUEST)
+
             with transaction.atomic():
                 Author.objects.create(name = author_name,country = country)
                 return Response({
                     'status':'success',
-                    'message':'Author created successfully....',
-                    
+                    'message':'Author created successfully....'
                 },
                 status=status.HTTP_201_CREATED
                 )
@@ -159,8 +170,8 @@ class AuthorView(APIView):
                 )
 
             if new_name:
-                author = Author.objects.filter(name = new_name)
-                if len(author) > 0:
+                authors = Author.objects.filter(name = new_name)
+                if len(authors) > 0:
                     return Response({
                             "status":"failed",
                             "message":f" '{new_name}' name is already exists please enter another name"
@@ -170,6 +181,13 @@ class AuthorView(APIView):
                 author.name = new_name
 
             if new_country:
+                if not new_country.isalpha():
+                    return Response({
+                        "status":"failed",
+                        "message":"'country' must be in string"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
                 author.country = new_country
 
             with transaction.atomic():
@@ -233,10 +251,26 @@ class BookView(APIView):
             author_id = request.data.get('author_id')
             published_date = request.data.get('published_date')
 
-            if not author_id or not book_name or not published_date:
+            if not book_name :
                 return Response({
-                    'status':'failed',
-                    'message':"'author_id', 'book_name' and 'published_date' must be required"
+                    "status":"failed",
+                    "message":"'book_name' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            if not author_id :
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                author_id = int(author_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -249,6 +283,23 @@ class BookView(APIView):
                     'message':"Author not found"
                 },
                 status=status.HTTP_404_NOT_FOUND
+                )
+            if not published_date :
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                date.strptime(published_date,'%Y-%m-%d')
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be in foramt(YYYY-MM-DD)"
+                },
+                status=status.HTTP_400_BAD_REQUEST
                 )
             
             with transaction.atomic():
@@ -265,7 +316,7 @@ class BookView(APIView):
                 'message':str(e)
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )   
+            )  
         
     def get(self,request):
         try:
@@ -306,12 +357,31 @@ class BookView(APIView):
             book = Book.objects.all()
             
             if book_id:
+                try:
+                    book_id = int(book_id)
+                except ValueError:
+                    return Response({
+                        "status":"failed",
+                        "message":"'book_id' must be in integer"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
                 book = book.filter(id = book_id)
             
             if search:
                 book = book.filter(Q(name__icontains = search) | Q(author__name__icontains = search))
             
             if start_date and end_date:
+                try:
+                    date.strptime(start_date,'%Y-%m-%d')
+                    date.strptime(end_date,'%Y-%m-%d')
+                except ValueError:
+                    return Response({
+                        "status":"failed",
+                        "message":"'end_date' and 'start_date' must be in foramt(YYYY-MM-DD)"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
                 book = book.filter(published_date__range = (start_date,end_date))
 
             paginator = Paginator(book,page_size)
@@ -373,6 +443,7 @@ class BookView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
+            
             try:
                 book = Book.objects.get(id = book_id)
             except Book.DoesNotExist:
@@ -386,8 +457,27 @@ class BookView(APIView):
             if new_name:
                 book.name = new_name
             if published_date:
+                try:
+                    date.strptime(published_date,'%Y-%m-%d')
+                except ValueError:
+                    return Response({
+                        "status":"failed",
+                        "message":"'published_date' must be in foramt(YYYY-MM-DD)"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
                 book.published_date = published_date
             if author_id:
+                try:
+                    author_id = int(author_id)
+                except ValueError:
+                    return Response({
+                        "status":"failed",
+                        "message":"'author_id' must be in integer"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+                
                 try:
                     author_data = Author.objects.get(id = author_id)
                     book.author = author_data
@@ -424,6 +514,16 @@ class BookView(APIView):
                 return Response({
                     'status':'failed',
                     'message':"'book_id' must be given"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                book_id = int(book_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'book_id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -541,6 +641,17 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            try:
+                book_img_id = int(book_img_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'id' must be in integer"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
             try:
                 bookImage = BookImages.objects.get(id = book_img_id)
             except BookImages.DoesNotExist: 
@@ -550,9 +661,21 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND
                 )
+            
             if book_id:
                 try:
+                    book_id = int(book_id)
+                except ValueError:
+                    return Response({
+                        "status":"failed",
+                        "message":"'book_id' must be in integer"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                try:
                     book = Book.objects.get(id = book_id)
+                    bookImage.book = book
                 except Book.DoesNotExist:
                     return Response({
                         'status':'failed',
@@ -560,19 +683,19 @@ class BookImageView(APIView):
                     },
                     status=status.HTTP_404_NOT_FOUND
                     )
-                bookImage.book = book
-
+                
             if images:
+                del bookImage.image
                 image = []
                 for img in images:
-                    save_path = default_storage.save(f'book_images/{book.name}/{img}',img)
+                    save_path = default_storage.save(f'book_images/{bookImage.book.name}/{img}',img)
                     new_image = default_storage.url(save_path)
                     image.append(new_image)
                 bookImage.image = image
 
             with transaction.atomic():
-                bookImage.save()
 
+                bookImage.save()
                 return Response(
                 {
                     "status": "success",
@@ -580,6 +703,7 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
+
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -590,11 +714,21 @@ class BookImageView(APIView):
     
     def delete(self,request):
         try:
-            book_img_id = request.data.get('book_img_id')
+            book_img_id = request.data.get('id')
             if not book_img_id:
                 return Response({
                     'status':'failed',
-                    'message':"'book_img_id' must be given"
+                    'message':"'id' must be given"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                book_img_id = int(book_img_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -617,6 +751,7 @@ class BookImageView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
+        
         except Exception as e:
             return Response({
                 "status": "error", 
@@ -821,15 +956,15 @@ class AuthorBookView(APIView):
         try:
             author_name = request.data.get('author_name')
             country = request.data.get('country')
-
-            if not author_name or not country:
+            
+            if not author_name :
                 return Response({
                     "status":"failed",
-                    "message":"'author_name' and 'country' must be required"
+                    "message":"'author_name' must be required"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
-            
+                
             author_names = Author.objects.filter(name = author_name)
             if len(author_names) > 0:
                 return Response({
@@ -839,6 +974,17 @@ class AuthorBookView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                     )
             
+            if not country:
+                return Response({
+                    "status":"failed",
+                    "message":"'country' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not country.isalpha():
+                return Response({"status":"failed","message":"'country' must be in string"},status=status.HTTP_400_BAD_REQUEST)
+
             with transaction.atomic():
                 Author.objects.create(name = author_name,country = country)
                 return Response({
@@ -862,10 +1008,28 @@ class AuthorBookView(APIView):
             author_id = request.data.get('author_id')
             published_date = request.data.get('published_date')
 
-            if not author_id or not book_name or not published_date:
+            if not book_name :
                 return Response({
-                    'status':'failed',
-                    'message':"'author_id', 'book_name' and 'published_date' must be required"
+                    "status":"failed",
+                    "message":"'book_name' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not author_id :
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                author_id = int(author_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -880,6 +1044,24 @@ class AuthorBookView(APIView):
                 status=status.HTTP_404_NOT_FOUND
                 )
             
+            if not published_date :
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                date.strptime(published_date,'%Y-%m-%d')
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be in foramt(YYYY-MM-DD)"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
             with transaction.atomic():
                 Book.objects.create(name = book_name,published_date = published_date,author = author)
                 return Response({
@@ -888,6 +1070,7 @@ class AuthorBookView(APIView):
                 },
                 status=status.HTTP_201_CREATED
                 )
+            
         except Exception as e:
             return Response({
                 'status':'error',
@@ -901,10 +1084,20 @@ class AuthorBookView(APIView):
             book_id = request.data.get('book_id')
             images = request.FILES.getlist('image')
 
-            if not book_id or not images:
+            if not book_id:
                 return Response({
                     'status':'failed',
-                    'message':"'book_id' and 'images' must be required"
+                    'message':"'book_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                book_id = int(book_id)
+            except ValueError:
+                return Response({
+                    "status":"failed",
+                    "message":f"'book_id' must be in integer"
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
@@ -917,6 +1110,14 @@ class AuthorBookView(APIView):
                     'message':"Book not found"
                 },
                 status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if not images:
+                return Response({
+                    'status':'failed',
+                    'message':"'image' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
                 )
             
             list_images = []
@@ -943,27 +1144,19 @@ class AuthorBookView(APIView):
         
     def post(self,request):
         try:
-            model = request.data.get('model_name')
-            if not model :
-                return Response({
-                    'status':'failed',
-                    'message':"'model_name' must be given(models - 'authors','books','bookImages')"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-                )
-            if model == 'authors':
-                author = self.post_author(request)
-                return author                       
-            elif model == 'books':
-                book = self.post_book(request)
-                return book
-            elif model == 'bookImages':
-                book_image = self.post_bookImage(request)
-                return book_image
+            if request.data.get('author_name'):
+                return self.post_author(request)
+                              
+            elif request.data.get('book_name'):
+                return self.post_book(request)
+            
+            elif request.data.get('book_id'):
+                return self.post_bookImage(request)
+            
             else:
                 return Response({
                     'status':'failed',
-                    'message':'Invalid model name'
+                    'message':'Matching field is Null or not exist'
                 },
                 status=status.HTTP_400_BAD_REQUEST
                 )
