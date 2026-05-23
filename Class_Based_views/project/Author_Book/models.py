@@ -4,6 +4,9 @@ class Author(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
     country = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return "Author"
 
 class Book(models.Model):
     id = models.AutoField(primary_key=True)
@@ -11,7 +14,13 @@ class Book(models.Model):
     published_date = models.DateField()
     author = models.ForeignKey(Author,on_delete=models.CASCADE,related_name='books')
 
+    def __str__(self):
+        return "Book"
+
 class BookImages(models.Model):
     id = models.AutoField(primary_key=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE,related_name='images')
     image = models.JSONField()
+
+    def __str__(self):
+        return "BookImages"

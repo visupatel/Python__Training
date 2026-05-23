@@ -9,4 +9,5 @@ urlpatterns = [
     path('books/',BookViewSerializer.as_view()),
     path('booksImg/',BookImageViewSerializer.as_view()),
     path('details/',AuthorBookView.as_view()),
+    path('optimiz_author/',OptimizeAuthor.as_view()),
 ]
