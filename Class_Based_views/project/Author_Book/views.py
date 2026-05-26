@@ -1690,11 +1690,11 @@ class FetchData(APIView):
 
     def post(self,request):
         try:
-            if request.data.get('author'):
+            if request.data.get('field') == 'author':
                 return self.fetch_author(request)
-            elif request.data.get('book'):
+            elif request.data.get('field') == 'book':
                 return self.fetch_book(request)
-            elif request.data.get('bookImage'):
+            elif request.data.get('field') == 'bookImage':
                 return self.fetch_bookImage(request)
             else:
                 return Response({
