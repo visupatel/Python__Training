@@ -100,7 +100,7 @@ class AuthorView(APIView):
                 author = author.filter(id = author_id)
 
             if search:
-                author = author.filter(Q(name__icontains = search) | Q(country__icontains = search) | Q(books__id__icontains = search) | Q(books__name__icontains = search))
+                author = author.filter(Q(name__icontains = search) | Q(country__icontains = search))
             
             paginator = Paginator(author, page_size)
 
@@ -1192,8 +1192,6 @@ class AuthorBookView(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-
 # optimize code  
 class OptimizeAuthor(APIView):
     def isValidtype(self,value,type):
@@ -1415,6 +1413,300 @@ class OptimizeAuthor(APIView):
             return Response({
                 'status':'error',
                 'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# Fetch data using post method
+class FetchData(APIView):
+    def typeConversion(self,type,value,field_name):
+        try:
+            return type(value)
+        except:
+            raise ValueError(f"'{field_name}' must be in integer")
+        
+    def ispageEmpty(self,paginator,page_num):
+        try:
+            return paginator.page(page_num)
+        except:
+            raise EmptyPage
+        
+    def fetch_data(self,paginator,page_num,data,field_name):
+        return Response({
+                "status":"success",
+                "message":f"{field_name} fetched successfully.....",
+                "current_page":page_num,
+                "total_items":paginator.count,
+                "total_pages":paginator.num_pages,
+                "data":data,
+            },
+            status=status.HTTP_200_OK
+            )
+            
+    def fetch_author(self,request):
+        try:
+            author_id = request.data.get('author_id')
+            search = request.data.get('search')
+            page_num = request.data.get('page_number')
+            page_size = request.data.get('page_size')
+
+            if not(page_num and page_size):
+                return Response({
+                    "status":"failed",
+                    "message":"'page_number' and 'page_size' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            page_num = self.typeConversion(int,page_num,"page_number")
+            page_size = self.typeConversion(int,page_size,"page_size")
+
+            if page_num <= 0 or page_size <= 0:
+                return Response({
+                    "status":"failed" ,
+                    "message":"'page-number' and 'page_size' must be greater than 0"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            author = Author.objects.all()
+            if author_id:
+                author_id = self.typeConversion(int,author_id,"author_id")
+                author = author.filter(id = author_id)
+            
+            if search:
+                author = author.filter(Q(name__icontains = search) | Q(country__icontains = search))
+
+            paginator = Paginator(author,page_size)
+            author = self.ispageEmpty(paginator,page_num)
+
+            author_data = []
+            for data in author:
+                books = []
+                for book in data.books.all():
+                    books.append({'id':book.id, 'name':book.name})
+                
+                author_data.append({
+                    'id' : data.id,
+                    'name':data.name,
+                    'country':data.country,
+                    'books':books
+                })
+            
+            return self.fetch_data(paginator,page_num,author_data,'Author data')
+
+        except ValueError as e:
+            return Response({
+                "status":"failed",
+                "message":str(e)
+            },
+            status=status.HTTP_400_BAD_REQUEST
+            ) 
+        
+        except EmptyPage:
+            return Response({
+                "status":"failed",
+                "message":"Page not found",
+            },
+            status=status.HTTP_404_NOT_FOUND
+            )
+        
+        except Exception as e:
+            return Response({
+                "status":"error",
+                "message":str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )   
+    
+    def fetch_book(self,request):
+        try:
+            book_id = request.data.get('book_id')
+            page_number = request.data.get('page_number')
+            page_size = request.data.get('page_size')
+            search = request.data.get('search')
+            start_date = request.data.get('start_date')
+            end_date = request.data.get('end_date')
+
+            if not page_number or not page_size:
+                return Response({
+                    'status':'failed',
+                    'message':"'page_number' and 'page_size' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            page_number = self.typeConversion(int,page_number,'page_number')
+            page_size = self.typeConversion(int,page_size,'page_size')
+            
+            if page_number <= 0 or page_size <= 0:
+                return Response({
+                    "status":"failed" ,
+                    "message":"'page-number' and 'page_size' must be greater than 0"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            book = Book.objects.all()
+            
+            if book_id:
+                book_id = self.typeConversion(int,book_id,'book_id')
+                book = book.filter(id = book_id)
+            
+            if search:
+                book = book.filter(Q(name__icontains = search) | Q(author__name__icontains = search))
+            
+            if start_date and end_date:
+                date.strptime(start_date,'%Y-%m-%d')
+                date.strptime(end_date,'%Y-%m-%d')
+                book = book.filter(published_date__range = (start_date,end_date))
+
+            paginator = Paginator(book,page_size)
+            book = self.ispageEmpty(paginator,page_number)
+
+            book_data = []
+            for data in book:
+                images = []
+                for img in data.images.all():
+                    images.extend(img.image)
+
+                book_data.append({
+                    'id':data.id,
+                    'name':data.name,
+                    'published_date': data.published_date,
+                    'author':data.author.name,
+                    'images':images
+                })
+
+            return self.fetch_data(paginator,page_number,book_data,'Book data')
+        
+        except ValueError as e:
+            if "integer" in str(e):
+                return Response({
+                    "status":"failed",
+                    "message":str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            return Response({
+                "status":"failed",
+                "message":"'end_date' and 'start_date' must be in foramt(YYYY-MM-DD)"
+            },
+            status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        except EmptyPage:
+            return Response({
+                "status":"failed",
+                "message":"Page not found",
+            },
+            status=status.HTTP_404_NOT_FOUND
+            )
+        
+        except Exception as e:
+            return Response({
+                'status':'error',
+                'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def fetch_bookImage(self,request):
+        try:
+            book_img_id = request.data.get('book_img_id')
+            search = request.data.get('search')
+            page_number = request.data.get('page_number')
+            page_size = request.data.get('page_size')
+
+            if not page_number or not page_size:
+                return Response({
+                    'status':'failed',
+                    'message':"'page_number' and 'page_size' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            page_number = self.typeConversion(int,page_number,'page_number')
+            page_size = self.typeConversion(int,page_size,'page_size')
+            
+            if page_number <= 0 or page_size <= 0:
+                return Response({
+                    "status":"failed" ,
+                    "message":"'page-number' and 'page_size' must be greater than 0"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            bookImages = BookImages.objects.all()
+            if book_img_id:
+                book_img_id = self.typeConversion(int,book_img_id,'book_img_id')
+                bookImages = bookImages.filter(id = book_img_id)
+            
+            if search:
+                bookImages = bookImages.filter(Q(book__name__icontains = search) | Q(book__author__name__icontains = search))
+
+            paginator = Paginator(bookImages,page_size)
+            bookImages = self.ispageEmpty(paginator,page_number)
+
+            book_data = []
+            for data in bookImages:
+
+                images = []
+                for img in data.image:
+                    images.append(img)
+
+                book_data.append({
+                    'id':data.id,
+                    'book':data.book.name,
+                    'author':data.book.author.name,
+                    'images':images
+                })
+        
+            return self.fetch_data(paginator,page_number,book_data,'Book Images')
+        
+        except ValueError as e:
+            return Response({
+                "status":"failed",
+                "mesaage":str(e)
+            },
+            status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        except EmptyPage:
+            return Response({
+                "status":"failed",
+                "message":"Page not found",
+            },
+            status=status.HTTP_404_NOT_FOUND
+            )
+        
+        except Exception as e:
+            return Response({
+                'status':'error',
+                'message':str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def post(self,request):
+        try:
+            if request.data.get('author'):
+                return self.fetch_author(request)
+            elif request.data.get('book'):
+                return self.fetch_book(request)
+            elif request.data.get('bookImage'):
+                return self.fetch_bookImage(request)
+            else:
+                return Response({
+                    "status":"failed",
+                    "message":"Matching field is null or not exist(fields - author,book,bookImage)"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response({
+                "status":"error",
+                "message":str(e)
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
