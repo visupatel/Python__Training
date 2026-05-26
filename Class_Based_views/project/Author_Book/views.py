@@ -8,6 +8,7 @@ from .seializers import AuthorSerializer,BookSerializer,BookImageSerializer
 from django.core.files.storage import default_storage
 from django.db.models import Q
 from django.core.paginator import Paginator,EmptyPage
+from rest_framework.exceptions import ValidationError
 
 class AuthorView(APIView):
     def post(self,request):
@@ -973,6 +974,7 @@ class BookImageViewSerializer(APIView):
 
 # for multiple post method in one class
 class AuthorBookView(APIView):
+
     def post_author(self,request):
         try:
             author_name = request.data.get('author_name')
@@ -1055,15 +1057,9 @@ class AuthorBookView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
                 )
 
-            try:
-                author = Author.objects.get(id = author_id) 
-            except Author.DoesNotExist:
-                return Response({
-                    'status':'failed',
-                    'message':"Author not found"
-                },
-                status=status.HTTP_404_NOT_FOUND
-                )
+
+            author = Author.objects.get(id = author_id) 
+
             
             if not published_date :
                 return Response({
@@ -1091,7 +1087,13 @@ class AuthorBookView(APIView):
                 },
                 status=status.HTTP_201_CREATED
                 )
-            
+        except Author.DoesNotExist:
+            return Response({
+                'status':'failed',
+                'message':"Author not found"
+            },
+            status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             return Response({
                 'status':'error',
@@ -1194,41 +1196,53 @@ class AuthorBookView(APIView):
 
 # optimize code  
 class OptimizeAuthor(APIView):
-    
-    def return_response(self,message,status_code):
-        return Response({
-            'status':'failed',
-            'message':message
-        },
-        status = status_code
-        )
-
+    def isValidtype(self,value,type):
+        try:
+            return type(value)
+        except:
+            raise ValueError
+        
     def post_author(self,request):
         try:
             author_name = request.data.get('author_name')
             country = request.data.get('country')
             
             if not author_name :
-                return self.return_response("'author_name' must be required",status.HTTP_400_BAD_REQUEST)
-                
+                return Response({
+                    "status":"failed",
+                    "message":"'author_name' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+
             if Author.objects.filter(name = author_name).exists():
-                return self.return_response(f"'{author_name}' name is already exists please enter another name", status.HTTP_400_BAD_REQUEST)
+                return Response({
+                        "status":"failed",
+                        "message":f"'{author_name}' name is already exists please enter another name"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
             
             if not country:
-                return self.return_response("'country' must be required", status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "status":"failed",
+                    "message":"'country' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
 
             if not country.replace(" ","").isalpha():
-                return self.return_response("'country' must be string only",status.HTTP_400_BAD_REQUEST)
-            
+                return Response({"status":"failed","message":"'country' must be string only"},status=status.HTTP_400_BAD_REQUEST)
+
             with transaction.atomic():
-                Author.objects.create(name = author_name,country = country)
+                Author.objects.create(name = author_name,country=country)
                 return Response({
                     'status':'success',
                     'message':'Author created successfully....'
                 },
                 status=status.HTTP_201_CREATED
                 )
-
+            
         except Exception as e:
             return Response({
                 'status':'error',
@@ -1244,35 +1258,66 @@ class OptimizeAuthor(APIView):
             published_date = request.data.get('published_date')
 
             if not book_name :
-                return self.return_response("'book_name' must be required", status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "status":"failed",
+                    "message":"'book_name' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             
             if not author_id :
-                return self.return_response("'author_id' must be required",status.HTTP_400_BAD_REQUEST)
-            try:
-                author_id = int(author_id)
-            except ValueError:
-                return self.return_response("'author_id' must be in integer",status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            author_id = self.isValidtype(author_id,int)
 
-            try:
-                author = Author.objects.get(id = author_id) 
-            except Author.DoesNotExist:
-                return self.return_response("Author not found", status.HTTP_404_NOT_FOUND)
+            author = Author.objects.get(id = author_id) 
             
             if not published_date :
-                return self.return_response("'published_date' must be required",status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             
-            try:
-                date.strptime(published_date,'%Y-%m-%d')
-            except ValueError:
-                return self.return_response("'published_date' must be in foramt(YYYY-MM-DD)",status.HTTP_400_BAD_REQUEST)
+            date.strptime(published_date,'%Y-%m-%d')
             
             with transaction.atomic():
-                Book.objects.create(name = book_name,published_date = published_date,author = author)
+                Book.objects.create(name = book_name, published_date = published_date, author = author)
                 return Response({
                     'status':'success',
                     'message':'Book created successfully....'
                 },
                 status=status.HTTP_201_CREATED
+                )
+
+        except Author.DoesNotExist:
+                return Response({
+                    'status':'failed',
+                    'message':"Author not found"
+                },
+                status=status.HTTP_404_NOT_FOUND
+                )
+        
+        except ValueError as e:
+            if str(e) == "":
+                return Response({
+                    "status":"failed",
+                    "message":"'author_id' must be an integer"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                return Response({
+                    "status":"failed",
+                    "message":"'published_date' must be in foramt(YYYY-MM-DD)"
+                },
+                status=status.HTTP_400_BAD_REQUEST
                 )
             
         except Exception as e:
@@ -1289,34 +1334,55 @@ class OptimizeAuthor(APIView):
             images = request.FILES.getlist('image')
 
             if not book_id:
-                return self.return_response("'book_id' must be required",status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'status':'failed',
+                    'message':"'book_id' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             
-            try:
-                book_id = int(book_id)
-            except ValueError:
-                return self.return_response("'book_id' must be in integer",status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                book = Book.objects.get(id = book_id)
-            except Book.DoesNotExist:
-                return self.return_response("Book not found",status.HTTP_404_NOT_FOUND)
+            book_id = self.isValidtype(book_id,int)
+
+            book = Book.objects.get(id = book_id)
             
             if not images:
-                return self.return_response("'image' must be required",status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'status':'failed',
+                    'message':"'image' must be required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+                )
             
             list_images = []
             for img in images:
                 save_path = default_storage.save(f'book_images/{book.name}/{img}',img)
-                list_images.append(default_storage.url(save_path))
+                new_image = default_storage.url(save_path)
+                list_images.append(new_image)
 
             with transaction.atomic():
-                BookImages.objects.create(book = book,image = list_images)                    
+                BookImages.objects.create(book = book,image = list_images)
                 return Response({
                     'status':'success',
                     'message':'Book Images created successfully....'
                 },
                 status=status.HTTP_201_CREATED
                 )
+
+        except Book.DoesNotExist:
+            return Response({
+                'status':'failed',
+                'message':"Book not found"
+            },
+            status=status.HTTP_404_NOT_FOUND
+            )
+        
+        except ValueError:
+            return Response({
+                "status":"failed",
+                "message":"'book_id' must be in integer"
+            },
+            status=status.HTTP_400_BAD_REQUEST
+            )
         
         except Exception as e:
             return Response({
