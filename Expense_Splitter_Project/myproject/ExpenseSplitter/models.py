@@ -46,10 +46,3 @@ class Expense(models.Model):
     receipt = models.JSONField(default=list)
 
 
-
-class ExpenseSplit(models.Model):
-    id = models.AutoField(primary_key=True)
-    expense = models.ForeignKey(Expense,on_delete=models.CASCADE,related_name="expense_split")
-    who_pays = models.ManyToManyField(User,related_name="who_pays")
-    amount_pays = models.DecimalField(max_digits=7,decimal_places=2)
-

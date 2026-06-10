@@ -252,7 +252,7 @@ class ExpenseView(APIView):
 
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def calculate_group_balances(request):
     try:
@@ -269,32 +269,51 @@ def calculate_group_balances(request):
         
         members = group.members.all()
         expenses = Expense.objects.filter(group = group)
+
         total_paid = {}
         total_share = {}
-        for expense in expenses:
-            who_paid = Expense.objects.get(id = expense.id)
-            if  who_paid.paid_by.username in total_paid.keys():
-                total_paid[who_paid.paid_by.username] += float(who_paid.amount_paid)
-            else:
-                total_paid[who_paid.paid_by.username] = float(who_paid.amount_paid)
+        for member in members:
+            total_paid[member.username] = 0.0
+            total_share[member.username] = 0.0
 
-            skippes = expense.skipped_member.all()
-            share = int(who_paid.amount_paid)/(len(members) - len(expense.skipped_member.all()))
+        for expense in expenses:
+            if  expense.paid_by.username in total_paid.keys():
+                total_paid[expense.paid_by.username] += float(expense.amount_paid)
+
+            skipped = expense.skipped_member.all()
+            participate = len(members) - len(expense.skipped_member.all())
+
+            if participate == 0:
+                continue
+
+            share = float(expense.amount_paid)/participate
 
             for member in members:
-                if member not in skippes:
+                if member not in skipped:
                     if member.username in total_share.keys():
                         total_share[member.username] += share
-                    else:
-                        total_share[member.username] = share
         
-        whom_to_pay = {}
-        for key in total_paid.keys():
-            balance = total_paid[key] - total_share[key]
-            whom_to_pay[key] = balance
+        balances = {}
+        for member in members:
+            username = member.username
+            balances[username] = round(total_paid[username] - total_share[username],2)
 
-        
-        return Response("okay")
+        print("balance:",balances)
+
+        result = []
+        for user,balance in balances.items():
+            if balance > 0:
+                new_balance = balance
+
+                for payer,payer_balance in balances.items():
+                    if payer_balance < 0 and new_balance > 0:
+                        amount = min(abs(payer_balance), new_balance)
+                        result.append(f"'{payer}' need to pay {amount} to '{user}'")
+
+                        balances[payer_balance] += amount
+                        new_balance -= amount
+
+        return Response({"status":"success","message":"Balance calculated...","who_paid_whom":result},status=status.HTTP_200_OK)
     
     except ValueError as e:
         return Response({"status":"failed","message":str(e)},status=status.HTTP_400_BAD_REQUEST)
